@@ -1,0 +1,21 @@
+<div>
+  <h2>Product List</h2>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Category</th>
+      <th>Price</th>
+      <th>Stock</th>
+      <th>Action</th>
+    </tr>
+    <tr ng-repeat="product in products">
+      <td>{{product.id}}</td>
+      <td>{{product.name}}</td>
+      <td>{{product.category}}</td>
+      <td>{{product.price}}</td>
+      <td>{{product.stock}}</td>
+      <td><button class="delete-btn" ng-click="deleteProduct(product.id)">Delete</button></td>
+    </tr>
+  </table>
+</div>
