@@ -1,68 +1,89 @@
-const express = require('express');
-const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const fs = require('fs');
+const express = require("express");
+const cors = require("cors");
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🗄️ Database setup
-const dbPath = path.join(__dirname, 'inventory.db');
-const dbExists = fs.existsSync(dbPath);
-const db = new sqlite3.Database(dbPath);
+// ================================
+// 📦 DATABASE SETUP (SQLite)
+// ================================
+const dbPath = path.join(__dirname, "inventory.db");
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error("❌ Error opening database:", err);
+  } else {
+    console.log("✅ Connected to SQLite database");
+    db.run(
+      `CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT,
+        price REAL NOT NULL,
+        stock INTEGER NOT NULL
+      )`,
+      (err) => {
+        if (err) console.error("❌ Error creating table:", err);
+      }
+    );
+  }
+});
 
-if (!dbExists) {
-  db.run(`
-    CREATE TABLE products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      category TEXT,
-      price REAL NOT NULL,
-      stock INTEGER NOT NULL
-    )
-  `);
-  console.log("✅ New SQLite database created: inventory.db");
-}
+// ================================
+// 🌐 ROUTES (API ENDPOINTS)
+// ================================
 
-// 🌍 Serve frontend files
-app.use(express.static(path.join(__dirname, '../frontend')));
-
-// GET all products
-app.get('/api/products', (req, res) => {
-  db.all('SELECT * FROM products', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+// Get all products (READ)
+app.get("/api/products", (req, res) => {
+  db.all("SELECT * FROM products", [], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
     res.json(rows);
   });
 });
 
-// ADD new product
-app.post('/api/products', (req, res) => {
+// Add a new product (CREATE)
+app.post("/api/products", (req, res) => {
   const { name, category, price, stock } = req.body;
-  const query = `INSERT INTO products (name, category, price, stock) VALUES (?, ?, ?, ?)`;
+  const query =
+    "INSERT INTO products (name, category, price, stock) VALUES (?, ?, ?, ?)";
   db.run(query, [name, category, price, stock], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, name, category, price, stock });
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
+    res.status(201).json({ id: this.lastID, name, category, price, stock });
   });
 });
 
-// DELETE product
-app.delete('/api/products/:id', (req, res) => {
+// Delete a product (DELETE)
+app.delete("/api/products/:id", (req, res) => {
   const { id } = req.params;
-  db.run('DELETE FROM products WHERE id = ?', id, function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'Deleted successfully' });
+  db.run("DELETE FROM products WHERE id = ?", id, function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
+    res.json({ message: "Product deleted" });
   });
 });
 
-// Fallback route
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+// ================================
+// ⚙️ SERVE FRONTEND FILES
+// ================================
+app.use(express.static(path.join(__dirname, "../frontend")));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// Start server
-const PORT = 4000;
+// ================================
+// 🚀 START SERVER (Render Compatible)
+// ================================
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
