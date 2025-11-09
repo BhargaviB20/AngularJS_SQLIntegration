@@ -1,89 +1,99 @@
 const express = require("express");
 const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
+const oracledb = require("oracledb");
 const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ================================
-// 📦 DATABASE SETUP (SQLite)
-// ================================
-const dbPath = path.join(__dirname, "inventory.db");
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error("❌ Error opening database:", err);
-  } else {
-    console.log("✅ Connected to SQLite database");
-    db.run(
-      `CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        category TEXT,
-        price REAL NOT NULL,
-        stock INTEGER NOT NULL
-      )`,
-      (err) => {
-        if (err) console.error("❌ Error creating table:", err);
-      }
-    );
+// Use environment variables if set (recommended)
+const dbConfig = {
+  user: process.env.DB_USER || "system",
+  password: process.env.DB_PASSWORD || "sqldbms", // <-- CHANGE if needed
+  connectString: process.env.DB_CONNECT_STRING || "localhost:1521/XE"
+};
+
+// Optional: adjust pool/autoCommit behavior
+oracledb.autoCommit = true;
+
+// Serve frontend (assumes frontend files are one level up in 'frontend' folder)
+app.use(express.static(path.join(__dirname, "../frontend")));
+
+// GET all products
+app.get("/api/products", async (req, res) => {
+  let conn;
+  try {
+    conn = await oracledb.getConnection(dbConfig);
+    const result = await conn.execute(`SELECT id, name, category, price, stock FROM products`);
+    // result.rows is an array of arrays; map to objects using metaData
+    const rows = result.rows.map(r => ({
+      id: r[0],
+      name: r[1],
+      category: r[2],
+      price: r[3],
+      stock: r[4]
+    }));
+    res.json(rows);
+  } catch (err) {
+    console.error("DB ERROR:", err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    if (conn) try { await conn.close(); } catch(_) {}
   }
 });
 
-// ================================
-// 🌐 ROUTES (API ENDPOINTS)
-// ================================
-
-// Get all products (READ)
-app.get("/api/products", (req, res) => {
-  db.all("SELECT * FROM products", [], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Database error" });
-    }
-    res.json(rows);
-  });
+// POST new product
+app.post("/api/products", async (req, res) => {
+  let conn;
+  try {
+    const { name, category, price, stock } = req.body;
+    conn = await oracledb.getConnection(dbConfig);
+    // Use RETURNING to get the generated id (if id is sequence-based)
+    const result = await conn.execute(
+      `INSERT INTO products (name, category, price, stock)
+       VALUES (:name, :category, :price, :stock)
+       RETURNING id INTO :id`,
+      {
+        name,
+        category,
+        price,
+        stock,
+        id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      { autoCommit: true }
+    );
+    const insertedId = (result.outBinds && result.outBinds.id && result.outBinds.id[0]) || null;
+    res.status(201).json({ id: insertedId, name, category, price, stock });
+  } catch (err) {
+    console.error("DB ERROR:", err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    if (conn) try { await conn.close(); } catch(_) {}
+  }
 });
 
-// Add a new product (CREATE)
-app.post("/api/products", (req, res) => {
-  const { name, category, price, stock } = req.body;
-  const query =
-    "INSERT INTO products (name, category, price, stock) VALUES (?, ?, ?, ?)";
-  db.run(query, [name, category, price, stock], function (err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Database error" });
-    }
-    res.status(201).json({ id: this.lastID, name, category, price, stock });
-  });
-});
-
-// Delete a product (DELETE)
-app.delete("/api/products/:id", (req, res) => {
-  const { id } = req.params;
-  db.run("DELETE FROM products WHERE id = ?", id, function (err) {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Database error" });
-    }
+// DELETE product
+app.delete("/api/products/:id", async (req, res) => {
+  let conn;
+  try {
+    const id = req.params.id;
+    conn = await oracledb.getConnection(dbConfig);
+    await conn.execute(`DELETE FROM products WHERE id = :id`, { id }, { autoCommit: true });
     res.json({ message: "Product deleted" });
-  });
+  } catch (err) {
+    console.error("DB ERROR:", err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    if (conn) try { await conn.close(); } catch(_) {}
+  }
 });
 
-// ================================
-// ⚙️ SERVE FRONTEND FILES
-// ================================
-app.use(express.static(path.join(__dirname, "../frontend")));
-app.get("/", (req, res) => {
+// Fallback to frontend index.html for SPA routes
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// ================================
-// 🚀 START SERVER (Render Compatible)
-// ================================
+// Start server (Render-compatible)
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Oracle backend + frontend running at http://localhost:${PORT}`));
