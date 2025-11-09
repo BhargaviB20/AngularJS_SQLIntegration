@@ -1,28 +1,44 @@
 app.controller('ProductController', function($scope, $location, ProductService) {
-  $scope.products = [];
-  $scope.newProduct = {};
+    $scope.products = [];
+    $scope.newProduct = {};
+    $scope.errorMessage = '';
 
-  function loadProducts() {
-    ProductService.getAll().then(function(response) {
-      $scope.products = response.data;
-    });
-  }
-
-  $scope.addProduct = function() {
-    ProductService.create($scope.newProduct).then(function() {
-      $scope.newProduct = {};
-      $location.path('/products');
-      loadProducts();
-    });
-  };
-
-  $scope.deleteProduct = function(id) {
-    if (confirm('Delete this product?')) {
-      ProductService.delete(id).then(function() {
-        loadProducts();
-      });
+    function loadProducts() {
+        $scope.errorMessage = '';
+        ProductService.getAll()
+            .then(function(response) {
+                $scope.products = response.data;
+            })
+            .catch(function(err) {
+                console.error('Error loading products', err);
+                $scope.errorMessage = 'Could not load products. Is the backend running?';
+            });
     }
-  };
 
-  loadProducts();
+    $scope.addProduct = function() {
+        ProductService.create($scope.newProduct)
+            .then(function(response) {
+                $scope.newProduct = {};
+                $location.path('/products');
+            })
+            .catch(function(err) {
+                console.error('Error adding product', err);
+                $scope.errorMessage = 'Could not add product.';
+            });
+    };
+
+    $scope.deleteProduct = function(id) {
+        if (confirm('Are you sure?')) {
+            ProductService.delete(id)
+                .then(function(response) {
+                    loadProducts();
+                })
+                .catch(function(err) {
+                    console.error('Error deleting product', err);
+                    $scope.errorMessage = 'Could not delete product.';
+                });
+        }
+    };
+
+    loadProducts();
 });
