@@ -1,32 +1,35 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="inventoryApp">
 <head>
-  <meta charset="UTF-8">
-  <title>AngularJS + SQL Integration</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    nav a { margin-right: 10px; text-decoration: none; color: #007bff; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; }
-    button { padding: 6px 12px; margin: 4px; cursor: pointer; }
-    .delete-btn { background-color: red; color: white; border: none; }
-    .add-btn { background-color: green; color: white; border: none; }
-  </style>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Inventory Project</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        nav { background: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+        nav a { padding: 10px; text-decoration: none; font-weight: bold; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        input { display: block; margin-bottom: 10px; padding: 8px; width: 300px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .delete-btn { background-color: #dc3545; }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
 </head>
 <body>
-  <h1>AngularJS + SQL Integration</h1>
-  <nav>
-    <a href="#!/products">View Products</a>
-    <a href="#!/add">Add Product</a>
-  </nav>
 
-  <div ng-view></div>
+    <h1>Product Inventory</h1>
+    <nav>
+        <a href="#!/products">View Products</a>
+        <a href="#!/add">Add Product</a>
+    </nav>
 
-  <script src="app.js"></script>
-  <script src="ProductService.js"></script>
-  <script src="ProductController.js"></script>
+    <div ng-view></div>
+
+    <script src="app.js"></script>
+    <script src="ProductService.js"></script>
+    <script src="ProductController.js"></script>
+
 </body>
 </html>
